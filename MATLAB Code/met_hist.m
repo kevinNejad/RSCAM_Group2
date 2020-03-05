@@ -11,7 +11,7 @@ clf
 
 randn('state',100)                                % set the state of randn
 %N = 1e2; dt = 1/N; 
-N = 1e4; dt = 1/N;
+N = 1e2; dt = 1/N;
 mu = 0.1; sigma = 0.2;                            % problem parameters
 
 a = 0.5;
