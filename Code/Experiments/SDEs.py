@@ -1,4 +1,5 @@
 import numpy as np
+
 class AssetPrice:
     """
     This is a class for Asset Price ODE. 
@@ -49,6 +50,12 @@ class AssetPriceInterestRate:
     
     def g(self,x):
         return self.sigma*np.sqrt(x)
+
+    def df(self,x):
+        return -self.lam
+
+    def dg(self,x):
+        return (0.5*self.sigma)/np.sqrt(x)
     
 
 class OpinionPolls:
@@ -58,9 +65,18 @@ class OpinionPolls:
         
     def f(self,x):
         return -self.mu*(x/(1-x**2))
+
+    def V(self, x):
+        return np.log(1-x**2)/2
         
     def g(self,x):
         return self.sigma
+
+    def df(self,x):
+        return (self.mu*(1-x**2) + 2*(x**2)*self.mu)/((1-x**2)**2)
+
+    def dg(self,x):
+        return 0
 
 
 
@@ -76,6 +92,12 @@ class PopulationDynamic:
     
     def g(self,x):
         return self.beta*x
+
+    def df(self,x):
+        return self.r*self.K - 2*self.r*x
+
+    def dg(self,x):
+        return self.beta
 
 
 
@@ -95,6 +117,12 @@ class EpidemicModel:
     def g(self, x):
         return self.p*self.C*(1-x)*x
 
+    def df(self, x):
+        return (self.p -1)*self.B + (self.beta*self.C - self.alpha)*(1 - 2*x)
+
+    def dg(self,x):
+        return self.p*self.C*(1-2*x)
+
 
 
 class PoliticalOpinion:
@@ -108,6 +136,12 @@ class PoliticalOpinion:
     
     def g(self,x):
         return np.sqrt(self.eps*x*(1-x))
+
+    def df(self,x):
+        return -self.r
+
+    def dg(self,x):
+        return 0.5*(self.eps - 2*self.eps*x)/np.sqrt(self.eps*x*(1-x))
     
 
 
@@ -120,6 +154,9 @@ class DoubleWellPotential:
     
     def g(self, x):
         return self.sigma
+
+    def V(self, x):
+        return (x**2)*((x-2)**2)
     
     def df(self, x):
         return -self._dV2(x)
@@ -156,6 +193,9 @@ class CustomSDE:
     
     def g(self, x):
         return np.sqrt(0.2)
+
+    def V(self, x):
+        return -((x**2)/2) + (x**4)/4
     
     def df(self, x):
         return 1 - 3*(x**2)
