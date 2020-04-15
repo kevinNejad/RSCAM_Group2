@@ -89,7 +89,7 @@ class ExponentialVTimestepping:
         return np.sqrt(2*self.rate / g**2)
     
 
-    def compute_MHT(self, X0, dt, f, g , num_itr, a=None, b=None):
+    def compute_MHT(self, X0, dt, f, g ,V , num_itr, a=None, b=None):
         if self.V is None:
             assert("Please provide value for V")
             
@@ -118,7 +118,7 @@ class ExponentialVTimestepping:
                 p = -np.log(v)
                 u = np.random.uniform()
                 sign = np.sign(0.5*(1 + (1/nu)*(g(Xn)**(-2))*f(Xn)) - u)
-                Xn_1 = Xn + (nu**(-1))*sign*(p - (g(Xn)**(-2))*(V*(Xn + (nu**(-1))*sign*p) - V(Xn)))
+                Xn_1 = Xn + (1/nu)*sign*(p - (g(Xn)**(-2))*(V(Xn + (1/nu)*sign*p) - V(Xn)))
                                  
                 w = np.random.uniform()
                 nu = self.nu(Xt, g)
