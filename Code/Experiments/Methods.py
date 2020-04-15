@@ -26,7 +26,7 @@ class ExponentialTimestepping:
             x = -Xn
         return (self.rate / g(Xn)**2) * (1/nu2_U2) * np.exp(-x * nu2_U2 + U*Xn)
     
-    def compute_MHT(self, X0, f, g , num_itr, a=None, b=None):
+    def compute_MHT_EM(self, X0, f, g ,dt, num_itr, a=None, b=None):
         if a is None and b is None:
             assert("Please provide a boundary value")  
         if a is None:
@@ -89,7 +89,7 @@ class ExponentialVTimestepping:
         return np.sqrt(2*self.rate / g**2)
     
 
-    def compute_MHT(self, X0, dt, f, g ,V , num_itr, a=None, b=None):
+    def compute_MHT_EM(self, X0, dt, f, g ,V , num_itr, a=None, b=None):
         if self.V is None:
             assert("Please provide value for V")
             
@@ -113,7 +113,6 @@ class ExponentialVTimestepping:
                 counter += 1
                 steps +=1
                 nu = self.nu(g(Xn))
-                print(nu)
                 v = np.random.uniform()
                 p = -np.log(v)
                 u = np.random.uniform()
@@ -121,8 +120,7 @@ class ExponentialVTimestepping:
                 Xn_1 = Xn + (1/nu)*sign*(p - (g(Xn)**(-2))*(V(Xn + (1/nu)*sign*p) - V(Xn)))
                                  
                 w = np.random.uniform()
-                nu = self.nu(Xt, g)
-                if Xn_1 < a or w < np.exp(-2*nu(min(Xn, Xn_1)-a)) or Xn_1 > b or w < np.exp(-2*nu(b - max(Xn, Xn_1))):
+                if Xn_1 < a or w < np.exp(-2*nu*(min(Xn, Xn_1)-a)) or Xn_1 > b or w < np.exp(-2*nu*(b - max(Xn, Xn_1))):
                     self.breaked += 1
                     break
                 
