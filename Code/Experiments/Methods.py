@@ -69,20 +69,8 @@ class ExponentialTimestepping:
             t_exit.append(tn)
             steps_exit.append(counter)
         
-        tmean = np.mean(t_exit)
-        tstd = np.std(t_exit)
-
-        cileft = tmean - 1.96*tstd/np.sqrt(num_itr)
-        ciright = tmean + 1.96*tstd/np.sqrt(num_itr)
         
-        steps_mean = np.mean(steps_exit)
-        steps_std = np.std(steps_exit)
-
-        steps_cileft = steps_mean - 1.96*steps_std/np.sqrt(num_itr)
-        steps_ciright = steps_mean + 1.96*steps_std/np.sqrt(num_itr)
-        
-
-        return t_exit, steps_exit, tmean, tstd, cileft, ciright, steps_mean, steps_std, steps_cileft, steps_ciright
+        return t_exit, steps_exit
     
     def plot(self,t_exit):
         histogram,bins = np.histogram(t_exit,bins=20,range=[0,20])
@@ -146,20 +134,8 @@ class ExponentialVTimestepping:
             t_exit.append(tn)
             steps_exit.append(counter)
                 
-        tmean = np.mean(t_exit)
-        tstd = np.std(t_exit)
-
-        cileft = tmean - 1.96*tstd/np.sqrt(num_itr)
-        ciright = tmean + 1.96*tstd/np.sqrt(num_itr)
         
-        steps_mean = np.mean(steps_exit)
-        steps_std = np.std(steps_exit)
-
-        steps_cileft = steps_mean - 1.96*steps_std/np.sqrt(num_itr)
-        steps_ciright = steps_mean + 1.96*steps_std/np.sqrt(num_itr)
-        
-
-        return t_exit, steps_exit, tmean, tstd, cileft, ciright, steps_mean, steps_std, steps_cileft, steps_ciright
+        return t_exit, steps_exit
     
     
     def plot(self,t_exit):
@@ -181,7 +157,7 @@ class EulerMaryamaBoundaryCheck:
     def P_hit(self, x0,xh,dt,xb,D, f_dash, f):
         return np.exp(-f_dash(xb)/(2*D*(np.exp(2*dt*f_dash(xb))-1))*(xh-xb+(x0-xb)*np.exp(dt*f_dash(xb))-f(xb)/f_dash(xb))**2 + (xb - (x0 + dt*(f(x0)+f(xh))/2))**2/4*D*dt)
     
-    def compute_MHT(self, X0, dt, f, g, df, num_itr, a=None, b=None):
+    def compute_MHT_EM(self, X0, dt, f, g, df, num_itr, a=None, b=None):
         if a is None and b is None:
             assert("Please provide a boundary value")  
         if a is None:
@@ -203,9 +179,9 @@ class EulerMaryamaBoundaryCheck:
                 D = (g(Xn)**2)/2 
                 
                 if Xn-a<self.thres_coeff*dt or b-Xn<self.thres_coeff*dt:
-                    prob_lowerb = self.P_hit(Xn,Xn_1,dt,a,D, df, f)
-                    prob_upperb = self.P_hit(Xn,Xn_1,dt,b,D, df, f)
-                    if prob_lowerb>np.random.uniform(0,1) or prob_upperb>np.random.uniform(0,1):
+                    prob_a = self.P_hit(Xn,Xn_1,dt,a,D, df, f)
+                    prob_b = self.P_hit(Xn,Xn_1,dt,b,D, df, f)
+                    if prob_a > np.random.uniform(0,1) or prob_b > np.random.uniform(0,1):
                         self.breaked += 1
                         break
                         
@@ -213,22 +189,10 @@ class EulerMaryamaBoundaryCheck:
                 Xn = Xn_1
             
             t_exit.append(tn-0.5*dt)
-        	steps_exit.append(counter)
+            steps_exit.append(counter)
 
-        tmean = np.mean(t_exit)
-        tstd = np.std(t_exit)
-
-        cileft = tmean - 1.96*tstd/np.sqrt(num_itr)
-        ciright = tmean + 1.96*tstd/np.sqrt(num_itr)
-        
-        steps_mean = np.mean(steps_exit)
-        steps_std = np.std(steps_exit)
-
-        steps_cileft = steps_mean - 1.96*steps_std/np.sqrt(num_itr)
-        steps_ciright = steps_mean + 1.96*steps_std/np.sqrt(num_itr)
-        
-
-        return t_exit, steps_exit, tmean, tstd, cileft, ciright, steps_mean, steps_std, steps_cileft, steps_ciright
+ 
+        return t_exit, steps_exit
     
     def plot(self,t_exit):
         histogram,bins = np.histogram(t_exit,bins=20,range=[0,20])
@@ -239,7 +203,7 @@ class EulerMaryamaBoundaryCheck:
 
 
 x = Symbol('x')
-class AdaptiveTimestep2:
+class AdaptiveTimestep:
     def __init__(self, zscore=0.6):
         self.zscore = zscore
         pass
@@ -359,13 +323,13 @@ class AdaptiveTimestep2:
             counter = 0
             while X > a and X < b:
             	counter += 1
-                dt_new_EM = adapt_timestep(b=b,a=a, Xn=X, fx=f, gx=g, dt=dt)
-                dW = np.sqrt(dt_new_EM)*np.random.randn()
-                X = X + dt_new_EM*f(X) + g(X)*dW
-                t += dt_new_EM
-                time.append(t)
-                path.append(X)
-                timestep.append(dt_new_EM)
+            	dt_new_EM = adapt_timestep(b=b,a=a, Xn=X, fx=f, gx=g, dt=dt)
+            	dW = np.sqrt(dt_new_EM)*np.random.randn()
+            	X = X + dt_new_EM*f(X) + g(X)*dW
+            	t += dt_new_EM
+            	time.append(t)
+            	path.append(X)
+            	timestep.append(dt_new_EM)
             self.paths.append(path)
             self.times.append(time)
             self.timesteps.append(timestep)
@@ -374,21 +338,8 @@ class AdaptiveTimestep2:
 
 
         
-            
-        tmean = np.mean(t_exit)
-        tstd = np.std(t_exit)
-
-        cileft = tmean - 1.96*tstd/np.sqrt(num_itr)
-        ciright = tmean + 1.96*tstd/np.sqrt(num_itr)
         
-        steps_mean = np.mean(steps_exit)
-        steps_std = np.std(steps_exit)
-
-        steps_cileft = steps_mean - 1.96*steps_std/np.sqrt(num_itr)
-        steps_ciright = steps_mean + 1.96*steps_std/np.sqrt(num_itr)
-        
-
-        return t_exit, steps_exit, tmean, tstd, cileft, ciright, steps_mean, steps_std, steps_cileft, steps_ciright
+        return t_exit, steps_exit
     
 
 
@@ -428,20 +379,7 @@ class EM_Milstein:
             t_exit.append(t - 0.5*dt)
             steps_exit.append(counter)
     
-        tmean = np.mean(t_exit)
-        tstd = np.std(t_exit)
-
-        cileft = tmean - 1.96*tstd/np.sqrt(num_itr)
-        ciright = tmean + 1.96*tstd/np.sqrt(num_itr)
-        
-        steps_mean = np.mean(steps_exit)
-        steps_std = np.std(steps_exit)
-
-        steps_cileft = steps_mean - 1.96*steps_std/np.sqrt(num_itr)
-        steps_ciright = steps_mean + 1.96*steps_std/np.sqrt(num_itr)
-        
-
-        return t_exit, steps_exit, tmean, tstd, cileft, ciright, steps_mean, steps_std, steps_cileft, steps_ciright
+        return t_exit, steps_exit
     
     def compute_MHT_Milstein(self, X0, dt, num_itr, f, g, dg, a, b):
         
@@ -466,21 +404,9 @@ class EM_Milstein:
 
             t_exit.append(t - 0.5*dt)
             steps_exit.append(counter)
-            
-        tmean = np.mean(t_exit)
-        tstd = np.std(t_exit)
+         
 
-        cileft = tmean - 1.96*tstd/np.sqrt(num_itr)
-        ciright = tmean + 1.96*tstd/np.sqrt(num_itr)
-
-        steps_mean = np.mean(steps_exit)
-        steps_std = np.std(steps_exit)
-
-        steps_cileft = steps_mean - 1.96*steps_std/np.sqrt(num_itr)
-        steps_ciright = steps_mean + 1.96*steps_std/np.sqrt(num_itr)
-        
-
-        return t_exit, steps_exit, tmean, tstd, cileft, ciright, steps_mean, steps_std, steps_cileft, steps_ciright
+        return t_exit, steps_exit
     
     
     def plot(self,t_exit):

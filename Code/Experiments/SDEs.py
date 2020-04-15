@@ -1,3 +1,4 @@
+import numpy as np
 class AssetPrice:
     """
     This is a class for Asset Price ODE. 
