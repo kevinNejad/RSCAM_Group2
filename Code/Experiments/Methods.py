@@ -7,7 +7,7 @@ from sympy.abc import x
 import sympy
 
 class ExponentialTimestepping:
-    def __init__(self, rate):
+    def __init__(self):
         self.rate = rate
     
     def F(self, Xn, f, g):
@@ -34,6 +34,7 @@ class ExponentialTimestepping:
         if b is None:
             b = np.inf
             
+        self.rate = dt
         t_exit = []
         steps_exit = []
         
@@ -80,7 +81,7 @@ class ExponentialTimestepping:
 
 
 class ExponentialVTimestepping:
-    def __init__(self, rate):
+    def __init__(self):
         self.V = None
         self.rate = rate
         
@@ -100,6 +101,7 @@ class ExponentialVTimestepping:
         if b is None:
             b = np.inf
             
+        self.rate = dt
         t_exit = []
         steps_exit = []
         
