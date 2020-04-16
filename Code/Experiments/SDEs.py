@@ -72,7 +72,7 @@ class OpinionPolls:
         return -self.mu*(x/(1-x**2))
 
     def V(self, x):
-        return np.log(1-x**2)/2
+        return self.mu*np.log(1-x**2)/2
         
     def g(self,x):
         return self.sigma
