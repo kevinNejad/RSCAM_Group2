@@ -10,9 +10,7 @@ class AssetPrice:
     mu: mu
     sigma: sigma
     """
-    def __init__(self, a, b, mu, sigma):
-        self.a = a
-        self.b = b
+    def __init__(self, mu, sigma):
         self.mu = mu
         self.sigma = sigma
         
