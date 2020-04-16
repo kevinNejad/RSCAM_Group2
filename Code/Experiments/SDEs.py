@@ -173,7 +173,7 @@ class DoubleWellPotential:
         return (x**2)*((x-2)**2)
     
     def df(self, x):
-        return -self._dV2(x)
+        return -8 + 24*x - 12*(x**2)
     
     def dg(self, x):
         return 0
