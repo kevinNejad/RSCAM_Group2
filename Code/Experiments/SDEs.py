@@ -36,6 +36,9 @@ class AssetPrice:
     
     def df(self,x):
         return self.mu
+    
+    def V(self, x):
+        return None
   
 
 class AssetPriceInterestRate:
@@ -57,6 +60,8 @@ class AssetPriceInterestRate:
     def dg(self,x):
         return (0.5*self.sigma)/np.sqrt(x)
     
+    def V(self, x):
+        return None
 
 class OpinionPolls:
     def __init__(self, mu, sigma):
@@ -98,7 +103,9 @@ class PopulationDynamic:
 
     def dg(self,x):
         return self.beta
-
+    
+    def V(self, x):
+        return None
 
 
 class EpidemicModel:
@@ -122,7 +129,11 @@ class EpidemicModel:
 
     def dg(self,x):
         return self.p*self.C*(1-2*x)
-
+    
+    def V(self, x):
+        return None
+    
+    
 
 
 class PoliticalOpinion:
@@ -142,6 +153,9 @@ class PoliticalOpinion:
 
     def dg(self,x):
         return 0.5*(self.eps - 2*self.eps*x)/np.sqrt(self.eps*x*(1-x))
+    
+    def V(self, x):
+        return None
     
 
 
@@ -182,6 +196,9 @@ class SimpleSDE:
     
     def dg(self, x):
         return 0
+    
+    def V(self, x):
+        return None
     
 
 class CustomSDE:

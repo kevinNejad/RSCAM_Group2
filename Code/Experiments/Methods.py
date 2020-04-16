@@ -8,15 +8,15 @@ import sympy
 
 class ExponentialTimestepping:
     def __init__(self):
-        self.rate = rate
+        pass
     
     def F(self, Xn, f, g):
         return f(Xn) / g(Xn)**2
         
     def N(self, Xn,f, g, dt):
-        return np.sqrt(((2*dt) / (g(Xn)**2)) + self.F(Xn,f,g)**2)
+        return np.sqrt(((2*(1/dt)) / (g(Xn)**2)) + self.F(Xn,f,g)**2)
     
-    def compute_MHT_EM(self, X0, f, g ,dt, num_itr, a=None, b=None):
+    def compute_MHT_EM(self, X0, f, g ,dt, df, dg, V, num_itr, a=None, b=None):
         if a is None and b is None:
             assert("Please provide a boundary value")  
         if a is None:
@@ -51,11 +51,11 @@ class ExponentialTimestepping:
                     self.breaked += 1
                     break
                     
-                tn += steps * (1/self.rate)
-                steps = 0
                 Xn = Xn_1
-                
-            t_exit.append(tn)
+
+
+            t_exit.append(steps * (dt))
+            steps = 0            
             steps_exit.append(counter)
         
         
@@ -70,16 +70,13 @@ class ExponentialTimestepping:
 
 class ExponentialVTimestepping:
     def __init__(self):
-        self.V = None
-        
-    
+        pass
+
     def nu(self,g, dt):
-        return np.sqrt(2*dt / g**2)
+        return np.sqrt(2*(1/dt) / g**2)
     
 
-    def compute_MHT_EM(self, X0, dt, f, g ,V , num_itr, a=None, b=None):
-        if self.V is None:
-            assert("Please provide value for V")
+    def compute_MHT_EM(self, X0, dt, f, g, df, dg ,V , num_itr, a=None, b=None):
             
         if a is None and b is None:
             assert("Please provide a boundary value")  
@@ -97,10 +94,10 @@ class ExponentialVTimestepping:
             Xn = X0
             steps = 0
             counter = 0
+            nu = self.nu(g(Xn), dt)
             while Xn > a and Xn < b:
                 counter += 1
                 steps +=1
-                nu = self.nu(g(Xn), dt)
                 v = np.random.uniform()
                 p = -np.log(v)
                 u = np.random.uniform()
@@ -113,11 +110,10 @@ class ExponentialVTimestepping:
                     break
                 
             
-                tn += steps * (1/self.rate)
-                steps = 0
                 Xn = Xn_1
-                
-            t_exit.append(tn)
+            
+            t_exit.append(steps * dt) 
+            steps = 0
             steps_exit.append(counter)
                 
         
@@ -143,7 +139,7 @@ class EulerMaryamaBoundaryCheck:
     def P_hit(self, x0,xh,dt,xb,D, f_dash, f):
         return np.exp(-f_dash(xb)/(2*D*(np.exp(2*dt*f_dash(xb))-1))*(xh-xb+(x0-xb)*np.exp(dt*f_dash(xb))-f(xb)/f_dash(xb))**2 + (xb - (x0 + dt*(f(x0)+f(xh))/2))**2/4*D*dt)
     
-    def compute_MHT_EM(self, X0, dt, f, g, df, num_itr, a=None, b=None):
+    def compute_MHT_EM(self, X0, dt, f, g, df, dg, V, num_itr, a=None, b=None):
         if a is None and b is None:
             assert("Please provide a boundary value")  
         if a is None:
@@ -221,7 +217,7 @@ class AdaptiveTimestep:
         p_max = eps[np.argmax(Xn_1dist)]
         p_min = eps[np.argmin(Xn_1dist)]
         theta = 0.001
-        
+
         sol1, sol2, sol3, sol4 = None, None, None, None 
         
         if (a < Xn + f*dt + g*np.sqrt(dt)*p_min) and (Xn + f*dt + g*np.sqrt(dt)*p_max < b):
@@ -239,39 +235,8 @@ class AdaptiveTimestep:
 
         return min(max(min_sol,theta), dt)
         
-        
     
-    def adapt_time_EM(self, b, x, f, g, dt ):
-        fx = f(x)
-        gx = g(x)
-        p = 3
-        theta = 0.000001
-        
-        
-        if fx == 0 and gx ==0:
-            return dt
-        
-        if fx == 0 :
-            return min(dt, max(((b - x) / gx*p)**2, theta))
-           
-        temp_v = ((gx*p)/2*fx)
-        root_v = np.sqrt( ((b - x)/fx) + ((gx*p)/2*fx)**2 )
-        
-        
-        if fx > 0:    
-            return min(dt, max(theta, (root_v - temp_v)**2))
-    
-        
-        if f < 0 :
-            if g > 0:
-                return min(dt, max(theta, (root_v + temp_v )**2, (-root_v - temp_v )**2) )
-            return min(dt, max(theta, (root_v - temp_v )**2, (-root_v + temp_v )**2) )
-        
-        return dt
- 
-        
-    
-    def compute_MHT_EM(self, X0, dt, num_itr, f, g, a, b):
+    def compute_MHT_EM(self, X0, dt, num_itr, f, g, df, dg, V, a, b):
         """
         Method that approxiamte a solution using Euler-Maruyama method
         
@@ -308,14 +273,14 @@ class AdaptiveTimestep:
             timestep = []
             counter = 0
             while X > a and X < b:
-            	counter += 1
-            	dt_new_EM = adapt_timestep(b=b,a=a, Xn=X, fx=f, gx=g, dt=dt)
-            	dW = np.sqrt(dt_new_EM)*np.random.randn()
-            	X = X + dt_new_EM*f(X) + g(X)*dW
-            	t += dt_new_EM
-            	time.append(t)
-            	path.append(X)
-            	timestep.append(dt_new_EM)
+                counter += 1
+                dt_new_EM = adapt_timestep(b=b,a=a, Xn=X, fx=f, gx=g, dt=dt)
+                dW = np.sqrt(dt_new_EM)*np.random.randn()
+                X = X + dt_new_EM*f(X) + g(X)*dW
+                t += dt_new_EM
+                time.append(t)
+                path.append(X)
+                timestep.append(dt_new_EM)
             self.paths.append(path)
             self.times.append(time)
             self.timesteps.append(timestep)
@@ -341,14 +306,14 @@ class EM_Milstein:
     def __init__(self):
         pass
     
-    def compute_MHT_EM(self,X0 , dt, num_itr, f, g, a, b):
+    def compute_MHT_EM(self,X0 , dt, num_itr, f, g, df, dg, V, a, b):
         
         if a is None and b is None:
             assert("Please provide a boundary value")  
         if a is None:
-            a = -np.inf
+            a = -1000
         if b is None:
-            b = np.inf
+            b = 1000
         
         t_exit = []
         steps_exit = []
@@ -367,7 +332,7 @@ class EM_Milstein:
     
         return t_exit, steps_exit
     
-    def compute_MHT_Milstein(self, X0, dt, num_itr, f, g, dg, a, b):
+    def compute_MHT_Milstein(self, X0, dt, num_itr, f, g, df, dg, V, a, b):
         
         if a is None and b is None:
             assert("Please provide a boundary value")  
