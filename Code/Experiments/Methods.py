@@ -13,18 +13,8 @@ class ExponentialTimestepping:
     def F(self, Xn, f, g):
         return f(Xn) / g(Xn)**2
         
-    def N(self, Xn,f, g):
-        return np.sqrt(((2*self.rate) / (g(Xn)**2)) + self.F(Xn,f,g)**2)
-    
-    def udpate_time(self,Xn, f, g):
-        nu2 = (2*self.rate) / g(Xn)**2
-        U = f(Xn)/g(Xn)
-        nu2_U2 = np.sqrt(nu2 + U**2)
-        
-        x = Xn
-        if Xn < 0:
-            x = -Xn
-        return (self.rate / g(Xn)**2) * (1/nu2_U2) * np.exp(-x * nu2_U2 + U*Xn)
+    def N(self, Xn,f, g, dt):
+        return np.sqrt(((2*dt) / (g(Xn)**2)) + self.F(Xn,f,g)**2)
     
     def compute_MHT_EM(self, X0, f, g ,dt, num_itr, a=None, b=None):
         if a is None and b is None:
@@ -34,7 +24,6 @@ class ExponentialTimestepping:
         if b is None:
             b = np.inf
             
-        self.rate = dt
         t_exit = []
         steps_exit = []
         
@@ -51,13 +40,12 @@ class ExponentialTimestepping:
                 v = np.random.uniform()
                 p = -np.log(v)
                 u = np.random.uniform()
-                sign = np.sign(0.5*(1 + self.F(Xn,f,g)/self.N(Xn,f,g)) - u)
-                Nt = self.N(Xn,f,g)
+                Nt = self.N(Xn,f,g, dt)
                 Ft = self.F(Xn,f,g)
+                sign = np.sign(0.5*(1 + Ft/Nt) - u)  
                 
                 Xn_1 = Xn + (sign*p)/(Nt-sign*Ft)
                 temp = Xn_1
-                dt = self.udpate_time(Xn_1, f, g)
                 w = np.random.uniform()
                 if Xn_1 < a or w < np.exp(-2*Nt*(min(Xn, Xn_1)-a)) or Xn_1 > b or w < np.exp(-2*Nt*(b-max(Xn, Xn_1))):
                     self.breaked += 1
@@ -83,11 +71,10 @@ class ExponentialTimestepping:
 class ExponentialVTimestepping:
     def __init__(self):
         self.V = None
-        self.rate = rate
         
     
-    def nu(self,g):
-        return np.sqrt(2*self.rate / g**2)
+    def nu(self,g, dt):
+        return np.sqrt(2*dt / g**2)
     
 
     def compute_MHT_EM(self, X0, dt, f, g ,V , num_itr, a=None, b=None):
@@ -100,8 +87,7 @@ class ExponentialVTimestepping:
             a = -np.inf
         if b is None:
             b = np.inf
-            
-        self.rate = dt
+
         t_exit = []
         steps_exit = []
         
@@ -114,7 +100,7 @@ class ExponentialVTimestepping:
             while Xn > a and Xn < b:
                 counter += 1
                 steps +=1
-                nu = self.nu(g(Xn))
+                nu = self.nu(g(Xn), dt)
                 v = np.random.uniform()
                 p = -np.log(v)
                 u = np.random.uniform()
