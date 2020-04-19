@@ -234,33 +234,134 @@ class AdaptiveTimestep:
         
         return min(vals)
     
+
     @staticmethod
-    def adapt_time_solver(b, a, Xn, fx, gx, dt):
+    def solve_4_b(f,g,b,Xn, pmax, theta):
+        C = b-Xn
+        B = g/pmax
+        if f == 0:
+            return dt if B < 0 else (C/B)**2
+
+        root2 = (C/f + (B**2)/(4*(f**2)))
+        if root2 < 0:
+            return theta
+
+        if f > 0:
+            return (np.sqrt(root2) - abs(B/(2*f)))**2
+
+        return dt if B < 0 else (- np.sqrt(root2) - B/(2*f) )**2
+
+
+    @staticmethod
+    def solve_4_a(f,g,a,Xn, pmin, theta):
+        D = a - Xn
+        B = g/pmin
+
+        if f == 0:
+            return dt if B > 0 else (D/B)**2
+
+        root2 = (D/f + (B**2)/(4*(f**2)))
+        if root2 < 0:
+            return theta
+
+        if f > 0:
+            return dt if B > 0 else (-np.sqrt(root2) - B/(2*f))**2
+
+        
+        return (np.sqrt(root2) - abs(B)/(2*f))**2
+
+    @staticmethod
+    def adapt_time_solver_EM(b, a, Xn, fx, gx, dt):
         f = fx(Xn)
         g = gx(Xn)
-        eps = np.arange(-self.zscore,self.zscore, 0.001)
+        eps = np.arange(-2.5,2.5, 0.001)
         Xn_1dist = [Xn + f*dt + g*np.sqrt(dt)*p for p in eps]
         p_max = eps[np.argmax(Xn_1dist)]
         p_min = eps[np.argmin(Xn_1dist)]
-        theta = 0.00001
+        theta = 0.000001
 
         sol1, sol2, sol3, sol4 = None, None, None, None 
-        
+        maxdt1, maxdt2 = 0, 0 
         if (a < Xn + f*dt + g*np.sqrt(dt)*p_min) and (Xn + f*dt + g*np.sqrt(dt)*p_max < b):
             return dt
         
         if Xn + f*dt + g*np.sqrt(dt)*p_max > b:
-            sol1=solve_univariate_inequality(f*x + g*p_max*sqrt(x) + Xn - b < 0, x, relational=False)
+            maxdt1 = AdaptiveTimestep.solve_4_b(f=f,g=g,b=b,Xn=Xn, pmax=p_max, theta=theta)
+            # sol1=solve_univariate_inequality(f*x + g*p_max*sqrt(x) + Xn - b < 0, x, relational=False)
             
         
         if Xn + f*dt + g*np.sqrt(dt)*p_min < a:
-            sol2 = solve_univariate_inequality(f*x + g*p_min*sqrt(x) + Xn - a > 0, x, relational=False)
+            maxdt2 = AdaptiveTimestep.solve_4_a(f=f,g=g,a=a,Xn=Xn, pmin=p_min, theta=theta)
+            
+            # sol2 = solve_univariate_inequality(f*x + g*p_min*sqrt(x) + Xn - a > 0, x, relational=False)
 
-        min_sol = self.find_min([sol1, sol2])
-        dt_n = min(max(min_sol,theta), dt)
+        return min(max(maxdt1, maxdt2,theta), dt)
 
-        return min(max(min_sol,theta), dt)
+
+    @staticmethod
+    def adapt_time_solver_Milstein(b, a, Xn, fx, gx, dgx, dt):
+        f = fx(Xn)
+        g = gx(Xn)
+        dg = dgx(Xn)
+        eps = np.arange(-2.5,2.5, 0.001)
+        Xn_1dist = [Xn + f*dt + g*np.sqrt(dt)*p + 0.5*g*dg*((np.sqrt(dt)*p)**2 - dt) for p in eps]
+        p_max = eps[np.argmax(Xn_1dist)]
+        p_min = eps[np.argmin(Xn_1dist)]
+        theta = 0.000001
+
+        sol1, sol2, sol3, sol4 = None, None, None, None 
+        maxdt1, maxdt2 = 0, 0 
+        if (a < Xn + f*dt + g*np.sqrt(dt)*p_min + 0.5*g*dg*((np.sqrt(dt)*p_min)**2 - dt)) and (Xn + f*dt + g*np.sqrt(dt)*p_max + 0.5*g*dg*((np.sqrt(dt)*p_max)**2 - dt) < b):
+            return dt
         
+        if Xn + f*dt + g*np.sqrt(dt)*p_max + 0.5*g*dg*((np.sqrt(dt)*p_max)**2 - dt) > b:
+            A = f + 0.5*g*dg*(p_max**2 - 1)
+            maxdt1 = AdaptiveTimestep.solve_4_b(f=A,g=g,b=b,Xn=Xn, pmax=p_max, theta=theta)
+            # sol1=solve_univariate_inequality(f*x + g*p_max*sqrt(x) + Xn - b < 0, x, relational=False)
+            
+        
+        if Xn + f*dt + g*np.sqrt(dt)*p_min < a:
+            A = f + 0.5*g*dg*(p_min**2 - 1)
+            maxdt2 = AdaptiveTimestep.solve_4_a(f=A,g=g,a=a,Xn=Xn, pmin=p_min, theta=theta)
+            
+            # sol2 = solve_univariate_inequality(f*x + g*p_min*sqrt(x) + Xn - a > 0, x, relational=False)
+
+        return min(max(maxdt1, maxdt2,theta), dt)
+        
+
+    @staticmethod
+    def worker1(stuff):
+        X0, f, g ,dt, num_itr, a, b = stuff
+
+        X = X0
+        t = 0
+        counter = 0
+        while X > a and X < b:
+            counter += 1
+            dt_new_EM = AdaptiveTimestep.adapt_time_solver_EM(b=b,a=a, Xn=X, fx=f, gx=g, dt=dt)
+            dW = np.sqrt(dt_new_EM)*np.random.randn()
+            X = X + dt_new_EM*f(X) + g(X)*dW
+            t += dt_new_EM
+       
+        return (t, counter)
+
+
+    @staticmethod
+    def worker2(stuff):
+        X0, f, g, dg ,dt, num_itr, a, b = stuff
+
+        X = X0
+        t = 0
+        counter = 0
+        while X > a and X < b:
+            counter += 1
+            dt_new_Milstein = AdaptiveTimestep.adapt_time_solver_Milstein(b=b,a=a, Xn=X, fx=f, gx=g, dgx=dg, dt=dt)
+            dW = np.sqrt(dt_new_Milstein)*np.random.randn()
+            X = X + dt_new_Milstein*f(X) + g(X)*dW + 0.5*g(X)*dg(X)*(dW**2 - dt_new_Milstein)
+            t += dt_new_Milstein
+       
+        return (t, counter)
+
     @staticmethod
     def compute_MHT_EM(X0, dt, num_itr, f, g, df, dg, V, a, b):
         """
@@ -273,9 +374,9 @@ class AdaptiveTimestep:
         Return: List containing Mean, STD, Confidence interval Left, Confidence interval Right
         """
         
-        self.paths = []
-        self.times = []
-        self.timesteps = []
+        # paths = []
+        # times = []
+        # timesteps = []
     
         if a is None and b is None:
             assert("Please provide a boundary value")  
@@ -284,40 +385,76 @@ class AdaptiveTimestep:
         if b is None:
             b = 1000
             
-            
+          
+
+        pool = Pool()
+
+        results = pool.map(AdaptiveTimestep.worker1, ((X0, f, g ,dt, num_itr, a, b) for i in range(num_itr)), chunksize=2500)
+        pool.close()
+        t_exit = [x[0] for x in results]
+        steps_exit = [x[1] for x in results]
+
         # TODO: Add threshold for situation when the loop goes forever
-        t_exit = []
-        steps_exit = []
+        # t_exit = []
+        # steps_exit = []
         
         
-        adapt_timestep = self.adapt_time_solver
-        for i in tqdm(range(num_itr)):
-            X = X0
-            t = 0
-            path = []
-            time = []
-            timestep = []
-            counter = 0
-            while X > a and X < b:
-                counter += 1
-                dt_new_EM = adapt_timestep(b=b,a=a, Xn=X, fx=f, gx=g, dt=dt)
-                dW = np.sqrt(dt_new_EM)*np.random.randn()
-                X = X + dt_new_EM*f(X) + g(X)*dW
-                t += dt_new_EM
-                time.append(t)
-                path.append(X)
-                timestep.append(dt_new_EM)
-            self.paths.append(path)
-            self.times.append(time)
-            self.timesteps.append(timestep)
-            t_exit.append(t - 0.5 * dt_new_EM)
-            steps_exit.append(counter)
+        # adapt_timestep = AdaptiveTimestep.adapt_time_solver
+        # for i in tqdm(range(num_itr)):
+        #     X = X0
+        #     t = 0
+        #     path = []
+        #     time = []
+        #     timestep = []
+        #     counter = 0
+        #     while X > a and X < b:
+        #         counter += 1
+        #         dt_new_EM = adapt_timestep(b=b,a=a, Xn=X, fx=f, gx=g, dt=dt)
+        #         dW = np.sqrt(dt_new_EM)*np.random.randn()
+        #         X = X + dt_new_EM*f(X) + g(X)*dW
+        #         t += dt_new_EM
+        #         time.append(t)
+        #         path.append(X)
+        #         timestep.append(dt_new_EM)
+        #     # paths.append(path)
+        #     # times.append(time)
+        #     # timesteps.append(timestep)
+        #     t_exit.append(t - 0.5 * dt_new_EM)
+        #     steps_exit.append(counter)
 
 
         
         
         return t_exit, steps_exit
+
+    @staticmethod
+    def compute_MHT_Milstein(X0, dt, num_itr, f, g, df, dg, V, a, b):
+        """
+        Method that approxiamte a solution using Milstein method
+        
+        Arguments:
+        f: F(x)
+        g: g(x)
+        
+        Return: List containing Mean, STD, Confidence interval Left, Confidence interval Right
+        """
     
+        if a is None and b is None:
+            assert("Please provide a boundary value")  
+        if a is None:
+            a = -1000
+        if b is None:
+            b = 1000
+            
+
+        pool = Pool()
+
+        results = pool.map(AdaptiveTimestep.worker2, ((X0, f, g, dg ,dt, num_itr, a, b) for i in range(num_itr)), chunksize=2500)
+        pool.close()
+        t_exit = [x[0] for x in results]
+        steps_exit = [x[1] for x in results]
+        
+        return t_exit, steps_exit
 
 
 class EM_Milstein:
