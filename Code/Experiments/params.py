@@ -4,7 +4,7 @@ SDE_PolOpi = S.PoliticalOpinion(r=1 , G=0.8 ,eps=0.4 )
 SDE_PopDyna = SDE = S.PopulationDynamic( K=1, r=1, beta=0.2)
 SDE_AssetPrice = S.AssetPrice(mu=0.5, sigma=1)
 SDE_AssetPriceInt = S.AssetPriceInterestRate(lam=1, mu=0.5, sigma=0.3)
-SDE_DoubleWell = .DoubleWellPotential(sigma=1.2)
+SDE_DoubleWell = S.DoubleWellPotential(sigma=1.2)
 SDE_OpiPoll = S.OpinionPolls(mu=5, sigma=1)
 SDE_Custom = S.CustomSDE()
 

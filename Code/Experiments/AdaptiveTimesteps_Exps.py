@@ -13,25 +13,25 @@ SDE_PolOpi = S.PoliticalOpinion(r=1 , G=0.8 ,eps=0.4 )
 SDE_PopDyna = SDE = S.PopulationDynamic( K=1, r=1, beta=0.2)
 SDE_AssetPrice = S.AssetPrice(mu=0.5, sigma=1)
 SDE_AssetPriceInt = S.AssetPriceInterestRate(lam=1, mu=0.5, sigma=0.3)
-SDE_DoubleWell = .DoubleWellPotential(sigma=1.2)
+SDE_DoubleWell = S.DoubleWellPotential(sigma=1.2)
 SDE_OpiPoll = S.OpinionPolls(mu=5, sigma=1)
 SDE_Custom = S.CustomSDE()
 
 SDEs_dict = {'EpiMod': {'a': 0.1, 'b':0.9, 'X0':0.13, 
 'f':SDE_EpiMod.f, 'g':SDE_EpiMod.g, 'df':SDE_EpiMod.df, 'dg':SDE_EpiMod.dg, 'V':SDE_EpiMod.V},
-'SDE_PolOpi': {'a': 0.01, 'b':0.99, 'X0':0.05, 
+'PolOpi': {'a': 0.01, 'b':0.99, 'X0':0.05, 
 'f':SDE_PolOpi.f, 'g':SDE_PolOpi.g, 'df':SDE_PolOpi.df, 'dg':SDE_PolOpi.dg, 'V':SDE_PolOpi.V},
-'SDE_PopDyna': {'a': 1, 'b':10, 'X0':9.95, 
+'PopDyna': {'a': 1, 'b':10, 'X0':9.95, 
 'f':SDE_PopDyna.f, 'g':SDE_PopDyna.g, 'df':SDE_PopDyna.df, 'dg':SDE_PopDyna.dg, 'V':SDE_PopDyna.V},
-'SDE_AssetPrice': {'a': 0.5, 'b':2, 'X0':1, 
+'AssetPrice': {'a': 0.5, 'b':2, 'X0':1, 
 'f':SDE_AssetPrice.f, 'g':SDE_AssetPrice.g, 'df':SDE_AssetPrice.df, 'dg':SDE_AssetPrice.dg, 'V':SDE_AssetPrice.V},
-'SDE_AssetPriceInt': {'a': 1, 'b':2, 'X0':1.9, 
+'AssetPriceInt': {'a': 1, 'b':2, 'X0':1.9, 
 'f':SDE_AssetPriceInt.f, 'g':SDE_AssetPriceInt.g, 'df':SDE_AssetPriceInt.df, 'dg':SDE_AssetPriceInt.dg, 'V':SDE_AssetPriceInt.V},
-'SDE_DoubleWell': {'a': -0.5, 'b':1.5, 'X0':0.25, 
+'DoubleWell': {'a': -0.5, 'b':1.5, 'X0':0.25, 
 'f':SDE_DoubleWell.f, 'g':SDE_DoubleWell.g, 'df':SDE_DoubleWell.df, 'dg':SDE_DoubleWell.dg, 'V':SDE_DoubleWell.V},
-'SDE_OpiPoll': {'a': -0.4, 'b':0.9, 'X0':0.4, 
+'OpiPoll': {'a': -0.4, 'b':0.9, 'X0':0.4, 
 'f':SDE_OpiPoll.f, 'g':SDE_OpiPoll.g, 'df':SDE_OpiPoll.df, 'dg':SDE_OpiPoll.dg, 'V':SDE_OpiPoll.V},
-'SDE_Custom': {'a': 0, 'b':2, 'X0':0.1, 
+'Custom': {'a': 0, 'b':2, 'X0':0.1, 
 'f':SDE_Custom.f, 'g':SDE_Custom.g, 'df':SDE_Custom.df, 'dg':SDE_Custom.dg, 'V':SDE_Custom.V}}
 
 AT = M.AdaptiveTimestep()
@@ -39,29 +39,31 @@ AT = M.AdaptiveTimestep()
 methods_dict = {'AT_EM':AT.compute_MHT_EM,
                 'AT_Mils': AT.compute_MHT_Milstein}
 
+for key, value in SDEs_dict.items():
+	a, b, X0, f, g, df, dg, V = value.values()
 
-for method, fun in methods_dict.items():
+	for method, fun in methods_dict.items():
 
-    t_exits = []
-    steps_exits = []
-    for dt in timesteps:
-        t_exit,steps_exit = fun(X0=X0,dt=dt,num_itr=num_itr, f=f, g=g, df=df, dg=dg, V=V, a=a,b=b)
-        t_exits.append(t_exit)
-        steps_exits.append(steps_exit)
-    
-#     paths = AT.paths if method=='AT' else None
-#     times = AT.times if method=='AT' else None
-#     ts = AT.timesteps if method=='AT' else None
-    paths, times, ts = None, None, None
-    
-    results_dic = {'SDE':'Epidemic', 'Method':method, 'timesteps':timesteps,
-               't_exits':t_exits, 'steps_exits':steps_exits,
-              'AT_paths':paths, 'AT_time':times, 'AT_timesteps':ts}
+	    t_exits = []
+	    steps_exits = []
+	    for dt in timesteps:
+	        t_exit,steps_exit = fun(X0=X0,dt=dt,num_itr=num_itr, f=f, g=g, df=df, dg=dg, V=V, a=a,b=b)
+	        t_exits.append(t_exit)
+	        steps_exits.append(steps_exit)
+	    
+	#     paths = AT.paths if method=='AT' else None
+	#     times = AT.times if method=='AT' else None
+	#     ts = AT.timesteps if method=='AT' else None
+	    paths, times, ts = None, None, None
+	    
+	    results_dic = {'SDE':key, 'Method':method, 'timesteps':timesteps,
+	               't_exits':t_exits, 'steps_exits':steps_exits,
+	              'AT_paths':paths, 'AT_time':times, 'AT_timesteps':ts}
 
-    file_name = './Results/' + results_dic['SDE'] + '_' + results_dic['Method'] + '.pickle'
-    if os.path.exists(file_name):
-        raise Exception('WARNING-The file already exist - Change values of SDE and Methods -WARNING')
+	    file_name = './Results/' + results_dic['SDE'] + '_' + results_dic['Method'] + '.pickle'
+	    if os.path.exists(file_name):
+	        raise Exception('WARNING-The file already exist - Change values of SDE and Methods -WARNING')
 
 
-    with open(file_name, 'wb') as file:
-        pickle.dump(results_dic, file)
+	    with open(file_name, 'wb') as file:
+	        pickle.dump(results_dic, file)

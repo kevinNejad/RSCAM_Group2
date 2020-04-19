@@ -197,7 +197,7 @@ class EulerMaryamaBoundaryCheck:
             
         pool = Pool()
 
-        results = pool.map(EulerMaryamaBoundaryCheck.worker,((X0, f, g ,dt, df, dg, V, num_itr, a,b,self.thres_coeff) for i in range(num_itr)),chunksize=2500)
+        results = pool.map(EulerMaryamaBoundaryCheck.worker,((X0, f, g ,dt, df, dg, V, num_itr, a,b,5) for i in range(num_itr)),chunksize=2500)
         pool.close()
         t_exit = [x[0] for x in results]
         steps_exit = [x[1] for x in results]
