@@ -207,7 +207,7 @@ class AdaptiveTimestep:
     @staticmethod
     def solve_4_b(f,g,b,Xn, pmax, theta):
         C = b-Xn
-        B = g/pmax
+        B = g*pmax
         if f == 0:
             return dt if B < 0 else (C/B)**2
 
@@ -224,7 +224,7 @@ class AdaptiveTimestep:
     @staticmethod
     def solve_4_a(f,g,a,Xn, pmin, theta):
         D = a - Xn
-        B = g/pmin
+        B = g*pmin
 
         if f == 0:
             return dt if B > 0 else (D/B)**2
@@ -236,17 +236,17 @@ class AdaptiveTimestep:
         if f > 0:
             return dt if B > 0 else (-np.sqrt(root2) - B/(2*f))**2
 
-        return (np.sqrt(root2) - abs(B)/(2*f))**2
+        return (np.sqrt(root2) - abs(B/(2*f)))**2
 
     @staticmethod
     def adapt_time_solver_EM(b, a, Xn, fx, gx, dt):
         f = fx(Xn)
         g = gx(Xn)
-        eps = np.arange(-1.5,1.5, 0.1)
+        eps = np.arange(-1,1, 0.1)
         Xn_1dist = [Xn + f*dt + g*np.sqrt(dt)*p for p in eps]
         p_max = eps[np.argmax(Xn_1dist)]
         p_min = eps[np.argmin(Xn_1dist)]
-        theta = 0.0001
+        theta = 0.0005
 
         maxdt1, maxdt2 = 0, 0 
         if (a < Xn + f*dt + g*np.sqrt(dt)*p_min) and (Xn + f*dt + g*np.sqrt(dt)*p_max < b):
@@ -267,11 +267,11 @@ class AdaptiveTimestep:
         f = fx(Xn)
         g = gx(Xn)
         dg = dgx(Xn)
-        eps = np.arange(-1.5,1.5, 0.1)
+        eps = np.arange(-1,1, 0.1)
         Xn_1dist = [Xn + f*dt + g*np.sqrt(dt)*p + 0.5*g*dg*((np.sqrt(dt)*p)**2 - dt) for p in eps]
         p_max = eps[np.argmax(Xn_1dist)]
         p_min = eps[np.argmin(Xn_1dist)]
-        theta = 0.0001
+        theta = 0.0005
 
         maxdt1, maxdt2 = 0, 0 
         if (a < Xn + f*dt + g*np.sqrt(dt)*p_min + 0.5*g*dg*((np.sqrt(dt)*p_min)**2 - dt)) and (Xn + f*dt + g*np.sqrt(dt)*p_max + 0.5*g*dg*((np.sqrt(dt)*p_max)**2 - dt) < b):
